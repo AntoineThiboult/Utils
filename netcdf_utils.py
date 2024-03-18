@@ -1,0 +1,154 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Jan  8 15:42:31 2024
+
+@author: ANTHI182
+"""
+import matplotlib.pyplot as plt
+from datetime import datetime, timedelta
+import numpy as np
+import geopandas as gpd
+
+
+def get_latlon_index(nc,lat,lon):
+    id_lat = np.argmin(np.abs(nc.variables['lat'][:] - lat))
+    id_lon = np.argmin(np.abs(nc.variables['lon'][:] - lon))
+    return id_lat, id_lon
+
+
+def print_variables(nc):
+    for v in nc.variables.keys():
+        names = [s for s in nc[v].__dict__ if "name" in s]
+        print(f'{nc[v]._getname()}')
+        for n in names:
+            print(f'\t {n}: {getattr(nc[v], n)}')
+
+
+def print_variable_dimension(nc):
+    for v in nc.variables:
+        print(f'{v}: {nc.variables[v].shape}')
+
+
+def show_mask(var, title='', id_slice=[0]):
+    nrows = len(id_slice) // np.sqrt(len(id_slice))
+    ncols = np.ceil(len(id_slice) / nrows)
+    fig, ax = plt.subplots(int(nrows),int(ncols))
+    ax = np.ravel(ax)
+    for i in range(0,len(ax)):
+        ax[i].imshow(var[i,:,:].mask.astype(float))
+    fig.suptitle(title)
+
+
+def show_slice(var, title='', id_slice=[0]):
+    if len(var.dimensions) < 3:
+        print(f'Number of dimnesion different from 3 for {title}')
+        return
+    nrows = len(id_slice) // np.sqrt(len(id_slice))
+    ncols = np.ceil(len(id_slice) / nrows)
+    fig, ax = plt.subplots(int(nrows),int(ncols))
+    ax = np.ravel(ax)
+    for i in range(0,len(ax)):
+        im = ax[i].imshow(var[id_slice[i],:,:])
+        ax[i].set_title(f'Slice: {id_slice[i]}')
+        fig.colorbar(im, ax=ax[i])
+    fig.suptitle(f'{title}')
+
+
+def show_all_var_slices(nc, id_slice=[0]):
+    for v in nc.variables:
+        show_slice(nc.variables[v], v, id_slice)
+
+
+def show_2d_slice(var, lon, lat, ax, cmap='hot', cb=True):
+    # Show a
+    lon_interval = np.mean(np.diff(lon))/2
+    lat_interval = np.mean(np.diff(lat))/2
+    im = ax.imshow(var, cmap=cmap, extent=[
+        lon.min()-lon_interval, lon.max()+lon_interval,
+        lat.min()-lat_interval, lat.max()+lat_interval],
+        aspect='equal', origin='lower')
+
+    # Plot embellishment
+    ax.set_xticks(ticks=lon, labels=[f'{t:0.1f}' for t in lon], rotation=75)
+    ax.set_yticks(ticks=lat, labels=[f'{t:0.1f}' for t in lat])
+    ax.grid()
+    if cb:
+        plt.colorbar(im)
+
+
+def add_shapefile(shapefile, ax):
+    shape = gpd.read_file(shapefile)
+    shape.plot(ax=ax)
+
+
+def hours_since_1900(date_str):
+    # Convert input date string to a datetime object
+    input_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+
+    # Define the reference date (1900-01-01 00:00:00.0)
+    reference_date = datetime(1900, 1, 1, 0, 0, 0)
+
+    # Calculate the difference in hours between input date and reference date
+    hours_difference = (input_date - reference_date).total_seconds() / 3600
+
+    return hours_difference
+
+
+def date_from_hours_elapsed(hours):
+    # Define the reference date (1900-01-01 00:00:00.0)
+    reference_date = datetime(1900, 1, 1, 0, 0, 0)
+
+    # Calculate the timedelta corresponding to the given number of hours
+    delta = timedelta(hours=hours)
+
+    # Calculate the target date by adding the timedelta to the reference date
+    target_date = reference_date + delta
+
+    # Format the target date as "%Y-%m-%d %H:%M:%S"
+    target_date_str = target_date.strftime("%Y-%m-%d %H:%M:%S")
+
+    return target_date_str
+
+
+def date_to_decimal_date(date_str):
+    # Convert input date string to a datetime object
+    input_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+
+    # Extract the date part
+    date_part = input_date.strftime("%Y%m%d")
+
+    # Calculate the fractional part of the day
+    fraction_of_day = input_date.hour / 24.0 + input_date.minute / 1440.0 + input_date.second / 86400.0
+
+    # Format the fractional part as ".fff"
+    fractional_part_str = "{:.8f}".format(fraction_of_day)[1:]
+
+    # Concatenate the date part and fractional part
+    result_date_str = date_part + fractional_part_str
+    result_date_decimal = float(result_date_str)
+
+    return result_date_decimal
+
+
+def decimal_date_to_date(fractional_date_str):
+    # Split the input string into date and fractional part
+    date_str, fraction_str = fractional_date_str.split('.')
+
+    # Convert date part to datetime object
+    date_part = datetime.strptime(date_str, "%Y%m%d")
+
+    # Convert fractional part to seconds
+    total_seconds = float("0." + fraction_str) * 86400  # Total seconds in a day
+
+    # Convert seconds to hours, minutes, and seconds
+    hours = int(total_seconds // 3600)
+    minutes = int((total_seconds % 3600) // 60)
+    seconds = int(total_seconds % 60)
+
+    # Combine date part and time part to get the final datetime object
+    final_date = date_part + timedelta(hours=hours, minutes=minutes, seconds=seconds)
+
+    # Format the final datetime object as "%Y-%m-%d %H:%M:%S"
+    final_date_str = final_date.strftime("%Y-%m-%d %H:%M:%S")
+
+    return final_date_str
