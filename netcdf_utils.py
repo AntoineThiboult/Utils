@@ -16,17 +16,40 @@ def get_latlon_index(nc,lat,lon):
     return id_lat, id_lon
 
 
-def print_variables(nc):
-    for v in nc.variables.keys():
+def print_variables(nc, sort_names=False):
+    if sort_names:
+        keys = sorted(nc.variables.keys())
+    else:
+        keys = nc.variables.keys()
+
+    for v in keys:
         names = [s for s in nc[v].__dict__ if "name" in s]
         print(f'{nc[v]._getname()}')
         for n in names:
             print(f'\t {n}: {getattr(nc[v], n)}')
 
 
-def print_variable_dimension(nc):
-    for v in nc.variables:
+def print_dimensions(nc, sort_names):
+    if sort_names:
+        keys = sorted(nc.dimensions.keys())
+    else:
+        keys = nc.dimensions.keys()
+
+    for v in keys:
         print(f'{v}: {nc.variables[v].shape}')
+
+
+def print_variable_dimension(nc, dim_names=False, sort_names=False):
+    if sort_names:
+        keys = sorted(nc.variables.keys())
+    else:
+        keys = nc.variables.keys()
+
+    for v in keys:
+        if dim_names:
+            print(f'{v}: {nc.variables[v]._getdims()} -> {nc.variables[v].shape}')
+        else:
+            print(f'{v}: {nc.variables[v].shape}')
 
 
 def show_mask(var, title='', id_slice=[0]):
