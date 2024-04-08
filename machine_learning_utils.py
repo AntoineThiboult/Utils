@@ -27,7 +27,7 @@ def compute_score(target_var, predicted_var,score='r2_score'):
         Score
     """
     score_func = getattr(metrics, score)
-    mask = ~np.isnan(target_var) & np.isfinite(predicted_var)
+    mask = np.isfinite(target_var) & np.isfinite(predicted_var)
     if sum(mask) == 0: return None
     return score_func(target_var[mask],predicted_var[mask])
 
