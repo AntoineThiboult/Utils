@@ -8,6 +8,7 @@ Created on Tue Apr  2 11:26:13 2024
 import rasterio
 import pyproj
 import numpy as np
+import geopandas as gpd
 
 def get_raster_hist(raster_file, bins=10, band=1):
     """
@@ -36,33 +37,113 @@ def get_raster_hist(raster_file, bins=10, band=1):
     return bin_counts, bin_egdes
 
 
-def wgs84_degrees_to_meter(latitude, longitude):
+def dms_to_ddeg(coord):
     """
-    Convert decimal degrees or degrees-minute-seconds coordinates to meter
-    coordinates.
+    Convert degree minute second to decimal degrees
 
     Parameters
     ----------
-    latitude : float <degrees.decimal> or tuple <(degrees, minute, sec)>
-    longitude : float <degrees.decimal> or tuple <(degrees, minute, sec)>
+    coord : tuple <(degree,minute,second)>
+
+    Returns
+    -------
+    dec_coord : Float
+    """
+    return coord[0] + coord[1]/60 + coord[2]/3600
+
+
+def projected_meter_to_degrees(coord, projection):
+    """
+    Convert decimal degrees to meters in the specified projection system.
+    Projection system can be either specified with the name (for example
+    world_mercator, lambert_conformal_conic) or by their code (3395, 32198).
+
+    Parameters
+    ----------
+    coord : tuple (x, y) or equivalently (longitude, latitude)
+    projection : string or integer.
+        projection system by name, or by code
 
     Returns
     -------
     x_meter : float
-        longitude in meters in WGS84 / World Mercator (EPSG:3395)
-    y_meter : TYPE
-        latitude in meters in WGS84 / World Mercator (EPSG:3395)
+        longitude in meters in projected coordinate system
+    y_meter : float
+        latitude in meters in projected coordinate system
     """
 
-    if isinstance(latitude, tuple):
-        # Convert DMS to Decimal Degrees
-        latitude = latitude[0] + latitude[1]/60 + latitude[2]/3600
-        longitude = longitude[0] + longitude[1]/60 + longitude[2]/3600
+    if isinstance(projection, str):
+        match projection:
+            case 'world_mercator':
+                proj_code_str = 'epsg:3395'
+            case 'lambert_conformal_conic':
+                proj_code_str = 'epsg:32198'
 
-    # Define WGS84 and Projected Coordinate System (e.g., WGS Transverse Mercator)
+    if isinstance(projection, int):
+        proj_code_str = f'epsg:{projection}'
+
+    # Define WGS84 and Projected Coordinate System
     wgs84 = pyproj.Proj(init='epsg:4326')  # WGS84 datum
-    proj = pyproj.Proj(init='epsg:3395')  # WGS84 / World Mercator (EPSG:3395) for meters
+    proj = pyproj.Proj(init=proj_code_str)  # WGS84 / World Mercator (EPSG:3395) for meters
 
     # Convert Decimal Degrees to Meters
-    x_meter, y_meter = pyproj.transform(wgs84, proj, longitude, latitude)
+    x_degrees, y_degrees = pyproj.transform(proj, wgs84, coord[0], coord[1])
+    return x_degrees, y_degrees
+
+
+def degrees_to_projected_meter(coord, projection):
+    """
+    Convert decimal degrees to meters in the specified projection system.
+    Projection system can be either specified with the name (for example
+    world_mercator, lambert_conformal_conic) or by their code (3395, 32198).
+
+    Parameters
+    ----------
+    coord : tuple (x, y) or equivalently (longitude, latitude)
+    projection : string or integer.
+        projection system by name, or by code
+
+    Returns
+    -------
+    x_meter : float
+        longitude in meters in projected coordinate system
+    y_meter : float
+        latitude in meters in projected coordinate system
+    """
+
+    if isinstance(projection, str):
+        match projection:
+            case 'world_mercator':
+                proj_code_str = 'epsg:3395'
+            case 'lambert_conformal_conic':
+                proj_code_str = 'epsg:32198'
+
+    if isinstance(projection, int):
+        proj_code_str = f'epsg:{projection}'
+
+    # Define WGS84 and Projected Coordinate System
+    wgs84 = pyproj.Proj(init='epsg:4326')  # WGS84 datum
+    proj = pyproj.Proj(init=proj_code_str)  # WGS84 / World Mercator (EPSG:3395) for meters
+
+    # Convert Decimal Degrees to Meters
+    x_meter, y_meter = pyproj.transform(wgs84, proj, coord[0], coord[1])
     return x_meter, y_meter
+
+
+def get_shapefile_extent(shapefile):
+    """
+    Get the bounding box of a shapefile
+
+    Parameters
+    ----------
+    shapefile : String or Pathlib Path
+        Path to the shapefile
+
+    Returns
+    -------
+    minx, miny, maxx, maxy : bounding box in the shapefile coordinates
+
+    """
+    shape = gpd.read_file(shapefile)
+    minx, miny, maxx, maxy = shape.geometry.total_bounds
+    return minx, miny, maxx, maxy

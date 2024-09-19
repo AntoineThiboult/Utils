@@ -104,20 +104,45 @@ def add_shapefile(shapefile, ax):
     shape.plot(ax=ax)
 
 
-def hours_since_1900(date_str):
-    # Convert input date string to a datetime object
-    input_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+def hours_since_ref_date(date, reference_date = datetime(1900, 1, 1, 0, 0, 0)):
+    """
+    Compute the number of hours that passed between 1900-01-01 00:00:00 and
+    input_date
 
-    # Define the reference date (1900-01-01 00:00:00.0)
-    reference_date = datetime(1900, 1, 1, 0, 0, 0)
+    Parameters
+    ----------
+    date : datetime object
+    reference_date : date time object that is used as reference. By default
+        reference_date = 1900-01-01 00:00:00
+
+    Returns
+    -------
+    hours_difference : float
+        difference in hours between input date and 1900-01-01 00:00:00
+
+    """
 
     # Calculate the difference in hours between input date and reference date
-    hours_difference = (input_date - reference_date).total_seconds() / 3600
+    hours_difference = (date - reference_date).total_seconds() / 3600
 
     return hours_difference
 
 
 def date_from_hours_elapsed(hours):
+    """
+    Compute the date from the number of hours elapsed since 1900-01-01 00:00:00
+
+    Parameters
+    ----------
+    hours : float
+        Number of hours elapsed since 1900-01-01 00:00:00
+
+    Returns
+    -------
+    target_date_str : datetime object
+        DESCRIPTION.
+
+    """
     # Define the reference date (1900-01-01 00:00:00.0)
     reference_date = datetime(1900, 1, 1, 0, 0, 0)
 
@@ -125,37 +150,57 @@ def date_from_hours_elapsed(hours):
     delta = timedelta(hours=hours)
 
     # Calculate the target date by adding the timedelta to the reference date
-    target_date = reference_date + delta
+    date = reference_date + delta
 
-    # Format the target date as "%Y-%m-%d %H:%M:%S"
-    target_date_str = target_date.strftime("%Y-%m-%d %H:%M:%S")
-
-    return target_date_str
+    return date
 
 
-def date_to_decimal_date(date_str):
-    # Convert input date string to a datetime object
-    input_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+def date_to_decimal_date(date):
+    """
+    Convert a datetime to a decimal date '%Y%m%d.fraction_of_day'
+
+    Parameters
+    ----------
+    date : datetime object
+
+    Returns
+    -------
+    result_date_decimal : String
+
+    """
 
     # Extract the date part
-    date_part = input_date.strftime("%Y%m%d")
+    date_integral_part = date.strftime("%Y%m%d")
 
     # Calculate the fractional part of the day
-    fraction_of_day = input_date.hour / 24.0 + input_date.minute / 1440.0 + input_date.second / 86400.0
+    fraction_of_day = date.hour / 24.0 + date.minute / 1440.0 + date.second / 86400.0
 
     # Format the fractional part as ".fff"
-    fractional_part_str = "{:.8f}".format(fraction_of_day)[1:]
+    date_fractional_part = "{:.8f}".format(fraction_of_day)[1:]
 
     # Concatenate the date part and fractional part
-    result_date_str = date_part + fractional_part_str
+    result_date_str = date_integral_part + date_fractional_part
     result_date_decimal = float(result_date_str)
 
     return result_date_decimal
 
 
-def decimal_date_to_date(fractional_date_str):
+def decimal_date_to_date(fractional_date):
+    """
+    Convert a string decimal date '%Y%m%d.fraction_of_day' to a datetime date
+
+    Parameters
+    ----------
+    fractional_date : String
+        Decimal date with format '%Y%m%d.fraction_of_day'
+
+    Returns
+    -------
+    date : datetime object
+    """
+
     # Split the input string into date and fractional part
-    date_str, fraction_str = fractional_date_str.split('.')
+    date_str, fraction_str = fractional_date.split('.')
 
     # Convert date part to datetime object
     date_part = datetime.strptime(date_str, "%Y%m%d")
@@ -169,9 +214,6 @@ def decimal_date_to_date(fractional_date_str):
     seconds = int(total_seconds % 60)
 
     # Combine date part and time part to get the final datetime object
-    final_date = date_part + timedelta(hours=hours, minutes=minutes, seconds=seconds)
+    date = date_part + timedelta(hours=hours, minutes=minutes, seconds=seconds)
 
-    # Format the final datetime object as "%Y-%m-%d %H:%M:%S"
-    final_date_str = final_date.strftime("%Y-%m-%d %H:%M:%S")
-
-    return final_date_str
+    return date

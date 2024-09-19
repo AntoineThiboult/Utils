@@ -56,7 +56,7 @@ def draw_linear_reg(reg, ax=None , X=None, c='C0', verb=False):
     return h
 
 
-def add_text_rp(text, x_rp,y_rp,ax=None):
+def add_text_rp(text, x_rp, y_rp, ax=None, fontsize=10):
     """
     Add text at X, Y data relative position (in data coordinates)
 
@@ -67,6 +67,7 @@ def add_text_rp(text, x_rp,y_rp,ax=None):
         Relative position of the string on the x axis
     y_rp : float (typically 0 < y_rp < 1)
         Relative position of the string on the y axis
+    fontsize : float or {'xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large'}
 
     Returns
     -------
@@ -79,11 +80,11 @@ def add_text_rp(text, x_rp,y_rp,ax=None):
     if ax:
         x_dc = ax.get_xlim()[0] + (ax.get_xlim()[1]- ax.get_xlim()[0]) *x_rp
         y_dc = ax.get_ylim()[0] + (ax.get_ylim()[1]- ax.get_ylim()[0]) *y_rp
-        h = ax.text(x_dc, y_dc, text)
+        h = ax.text(x_dc, y_dc, text, fontsize=fontsize)
     else:
         x_dc = x_rp
         y_dc = y_rp
-        h = plt.text(x_dc, y_dc, text)
+        h = plt.text(x_dc, y_dc, text, fontsize=fontsize)
     return h
 
 
@@ -137,7 +138,7 @@ def draw_identity_line(ax, color='k'):
     return l
 
 
-def density_scatter_plot(x, y, ax=None, s=50, cmap='viridis'):
+def density_scatter_plot(x, y, ax=None, s=50, cmap='viridis', hexbin=False):
     """
     Make a scatter plot that renders the density of the points with a color
     scheme.
@@ -155,6 +156,9 @@ def density_scatter_plot(x, y, ax=None, s=50, cmap='viridis'):
         Size of the markers. The default is 50.
     cmap : String, optional
         Matplotlib colormap. The default is 'viridis'.
+    hexbin : Bool, optional
+        Switches to pyplot hexbin plot instead of scatter. Appropriate for
+        very large dataset.
 
     Returns
     -------
@@ -165,6 +169,15 @@ def density_scatter_plot(x, y, ax=None, s=50, cmap='viridis'):
     mask = np.isfinite(x) & np.isfinite(y)
     x, y = x[mask], y[mask]
 
+    if not ax:
+        fig, ax = plt.subplots()
+
+    if hexbin:
+        # Hexbin plot
+        ax.set_facecolor('white')
+        h = ax.hexbin(x, y, gridsize=50, cmap=cmap, mincnt=1 )
+        return h
+
     # Calculate the point density
     xy = np.vstack([x,y])
     z = gaussian_kde(xy)(xy)
@@ -173,8 +186,7 @@ def density_scatter_plot(x, y, ax=None, s=50, cmap='viridis'):
     idx = z.argsort()
     x, y, z = x[idx], y[idx], z[idx]
 
-    if not ax:
-        fig, ax = plt.subplots()
+    # Scatter plot
     h = ax.scatter(x, y, c=z, s=s, cmap=cmap)
     return h
 
@@ -341,3 +353,35 @@ def plot_footprint_over_map(footprint, background_map, coordinates,
         plt.clabel(ctr, fmt=fmt, inline=True, fontsize=iso_label_size)
     plt.show()
     return fig, ax
+
+
+def draw_whiskers(x_pos, y_pos, whisker_width=0.5, color='k', linewidth=1, ax=None):
+    """
+    Add text at X, Y data relative position (in data coordinates)
+
+    Parameters
+    ----------
+    ax : Pyplot AxesSubplot object
+    x_pos : float
+        x position of the whisker
+    y_pos : tuple of float
+        top and bottom of the whisker y position
+
+    Returns
+    -------
+    w, wt, wb : matplotlib.lines.Line2D objects
+        objects that represent the vertical line (w), top horizontal line (wt), and bottom horizontal line (wb)
+    y_dc : float
+        y position in data coordinates
+
+    """
+    if not ax:
+        fig, ax = plt.subplots()
+
+    w = ax.plot([x_pos,x_pos], [y_pos[0],y_pos[1]],
+            color=color, linewidth=linewidth)
+    wt = ax.plot([x_pos-whisker_width/2,x_pos+whisker_width/2], [y_pos[1],y_pos[1]],
+            color=color, linewidth=linewidth)
+    wb = ax.plot([x_pos-whisker_width/2,x_pos+whisker_width/2], [y_pos[0],y_pos[0]],
+            color=color, linewidth=linewidth)
+    return w, wt, wb
