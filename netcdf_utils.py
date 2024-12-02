@@ -11,8 +11,13 @@ import geopandas as gpd
 
 
 def get_latlon_index(nc,lat,lon):
-    id_lat = np.argmin(np.abs(nc.variables['lat'][:] - lat))
-    id_lon = np.argmin(np.abs(nc.variables['lon'][:] - lon))
+    if ('latitude' in nc.dimensions) & ('longitude' in nc.dimensions):
+        id_lat = np.argmin(np.abs(nc.variables['latitude'][:] - lat))
+        id_lon = np.argmin(np.abs(nc.variables['longitude'][:] - lon))
+    elif ('lat' in nc.dimensions) & ('lon' in nc.dimensions):
+        id_lat = np.argmin(np.abs(nc.variables['lat'][:] - lat))
+        id_lon = np.argmin(np.abs(nc.variables['lon'][:] - lon))
+
     return id_lat, id_lon
 
 
